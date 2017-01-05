@@ -1,10 +1,12 @@
 'use strict';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
+var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
 
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
+
+var _objectWithoutProperties2 = require('babel-runtime/helpers/objectWithoutProperties');
+
+var _objectWithoutProperties3 = _interopRequireDefault(_objectWithoutProperties2);
 
 var _bluebird = require('bluebird');
 
@@ -14,20 +16,36 @@ var _lodash = require('lodash');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _objectWithoutProperties(obj, keys) { var target = {}; for (var i in obj) { if (keys.indexOf(i) >= 0) continue; if (!Object.prototype.hasOwnProperty.call(obj, i)) continue; target[i] = obj[i]; } return target; }
-/**
- * Module dependencies.
- */
-
-const DEFAULT_LIMIT = 10;
-const DEFAULT_OFFSET = 0;
-const DEFAULT_PAGE = 1;
+var DEFAULT_LIMIT = 10;
+var DEFAULT_OFFSET = 0;
+var DEFAULT_PAGE = 1;
 
 /**
- * Export `bookshelf-pagination` plugin.
+ * Exports a plugin to pass into the bookshelf instance, i.e.:
+ *
+ *      import config from './knexfile';
+ *      import knex from 'knex';
+ *      import bookshelf from 'bookshelf';
+ *
+ *      const ORM = bookshelf(knex(config));
+ *
+ *      ORM.plugin('bookshelf-pagination-plugin');
+ *
+ *      export default ORM;
+ *
+ * The plugin attaches two instance methods to the bookshelf
+ * Model object: orderBy and fetchPage.
+ *
+ * Model#orderBy calls the underlying query builder's orderBy method, and
+ * is useful for ordering the paginated results.
+ *
+ * Model#fetchPage works like Model#fetchAll, but returns a single page of
+ * results instead of all results, as well as the pagination information
+ *
+ * See methods below for details.
  */
+module.exports = function paginationPlugin(bookshelf) {
 
-exports.default = Bookshelf => {
   /**
    * @method Model#fetchPage
    * @belongsTo Model
@@ -95,26 +113,28 @@ exports.default = Bookshelf => {
    * @returns {Promise<Model|null>}
    */
   function fetchPage() {
-    let options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var _this = this;
 
-    const page = options.page,
-          pageSize = options.pageSize,
-          limit = options.limit,
-          offset = options.offset,
-          fetchOptions = _objectWithoutProperties(options, ['page', 'pageSize', 'limit', 'offset']);
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var page = options.page,
+        pageSize = options.pageSize,
+        limit = options.limit,
+        offset = options.offset,
+        fetchOptions = (0, _objectWithoutProperties3.default)(options, ['page', 'pageSize', 'limit', 'offset']);
 
-    let usingPageSize = false; // usingPageSize = false means offset/limit, true means page/pageSize
-    let _page;
-    let _pageSize;
-    let _limit;
-    let _offset;
+
+    var usingPageSize = false; // usingPageSize = false means offset/limit, true means page/pageSize
+    var _page = void 0;
+    var _pageSize = void 0;
+    var _limit = void 0;
+    var _offset = void 0;
 
     function ensureIntWithDefault(val, def) {
       if (!val) {
         return def;
       }
 
-      const _val = parseInt(val);
+      var _val = parseInt(val);
       if (Number.isNaN(_val)) {
         return def;
       }
@@ -136,31 +156,33 @@ exports.default = Bookshelf => {
       _offset = ensureIntWithDefault(offset, DEFAULT_OFFSET);
     }
 
-    const tableName = this.constructor.prototype.tableName;
-    const idAttribute = this.constructor.prototype.idAttribute ? this.constructor.prototype.idAttribute : 'id';
+    var tableName = this.constructor.prototype.tableName;
+    var idAttribute = this.constructor.prototype.idAttribute ? this.constructor.prototype.idAttribute : 'id';
 
-    const paginate = () => {
+    var paginate = function paginate() {
       // const pageQuery = clone(this.query());
-      const pager = this.constructor.forge();
+      var pager = _this.constructor.forge();
 
-      return pager.query(qb => {
-        (0, _lodash.assign)(qb, this.query().clone());
+      return pager.query(function (qb) {
+        (0, _lodash.assign)(qb, _this.query().clone());
         qb.limit.apply(qb, [_limit]);
         qb.offset.apply(qb, [_offset]);
         return null;
       }).fetchAll(fetchOptions);
     };
 
-    const count = () => {
-      const notNeededQueries = ['orderByBasic', 'orderByRaw'];
-      const groupQueries = ['groupByBasic', 'groupByRaw'];
-      const counter = this.constructor.forge();
+    var count = function count() {
+      var notNeededQueries = ['orderByBasic', 'orderByRaw'];
+      var groupQueries = ['groupByBasic', 'groupByRaw'];
+      var counter = _this.constructor.forge();
 
-      return counter.query(qb => {
-        (0, _lodash.assign)(qb, this.query().clone());
+      return counter.query(function (qb) {
+        (0, _lodash.assign)(qb, _this.query().clone());
 
-        const statementTypes = (0, _lodash.map)(qb._statements, statement => statement.type);
-        const containGroupBy = (0, _lodash.intersection)(statementTypes, groupQueries).length > 0;
+        var statementTypes = (0, _lodash.map)(qb._statements, function (statement) {
+          return statement.type;
+        });
+        var containGroupBy = (0, _lodash.intersection)(statementTypes, groupQueries).length > 0;
         if (containGroupBy) {
           console.log('count group by SQL', qb.toSQL());
         }
@@ -168,23 +190,23 @@ exports.default = Bookshelf => {
         // Remove grouping and ordering. Ordering is unnecessary
         // for a count, and grouping returns the entire result set
         // What we want instead is to use `DISTINCT`
-        (0, _lodash.remove)(qb._statements, statement => {
+        (0, _lodash.remove)(qb._statements, function (statement) {
           return notNeededQueries.indexOf(statement.type) > -1 || statement.grouping === 'columns';
         });
-        qb.countDistinct.apply(qb, [`${ tableName }.${ idAttribute }`]);
-      }).fetchAll().then(result => {
+        qb.countDistinct.apply(qb, [tableName + '.' + idAttribute]);
+      }).fetchAll().then(function (result) {
 
-        const metadata = usingPageSize ? { page: _page, pageSize: _limit } : { offset: _offset, limit: _limit };
+        var metadata = usingPageSize ? { page: _page, pageSize: _limit } : { offset: _offset, limit: _limit };
 
         if (result && result.length == 1) {
           // We shouldn't have to do this, instead it should be
           // result.models[0].get('count')
           // but SQLite uses a really strange key name.
-          const count = result.models[0];
-          const keys = Object.keys(count.attributes);
+          var _count = result.models[0];
+          var keys = Object.keys(_count.attributes);
           if (keys.length === 1) {
-            const key = Object.keys(count.attributes)[0];
-            metadata.rowCount = parseInt(count.attributes[key]);
+            var key = Object.keys(_count.attributes)[0];
+            metadata.rowCount = parseInt(_count.attributes[key]);
           }
         }
 
@@ -192,14 +214,13 @@ exports.default = Bookshelf => {
       });
     };
 
-    return _bluebird2.default.join(paginate(), count()).then((_ref) => {
-      var _ref2 = _slicedToArray(_ref, 2);
-
-      let rows = _ref2[0],
+    return _bluebird2.default.join(paginate(), count()).then(function (_ref) {
+      var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
+          rows = _ref2[0],
           metadata = _ref2[1];
 
-      const pageCount = Math.ceil(metadata.rowCount / _limit);
-      const pageData = (0, _lodash.assign)(metadata, { pageCount: pageCount });
+      var pageCount = Math.ceil(metadata.rowCount / _limit);
+      var pageData = (0, _lodash.assign)(metadata, { pageCount: pageCount });
       return (0, _lodash.assign)(rows, { pagination: pageData });
     });
   }
@@ -220,5 +241,3 @@ exports.default = Bookshelf => {
     return fetchPage.apply.apply(fetchPage, [this.model.forge()].concat(args));
   };
 };
-
-module.exports = exports['default'];

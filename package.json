@@ -2,7 +2,7 @@
   "name": "bookshelf-pagination",
   "version": "0.0.1",
   "description": "pagination plugin for bookshelf",
-  "main": "bookshelf.js",
+  "main": "./dist/index.js",
   "scripts": {
     "clean": "rm -rf ./lib",
     "dev": "babel -w -q -L -D ./src/ --out-dir ./dist/",
