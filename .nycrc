@@ -1,0 +1,10 @@
+{
+  "instrument": false,
+  "report-dir": "test/coverage",
+  "reporter": [
+    "html",
+    "lcov",
+    "text-summary"
+  ],
+  "sourceMap": false
+}
