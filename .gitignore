@@ -2,3 +2,4 @@
 /node_modules
 /test/coverage
 /test/knexfile.js
+/npm-debug.log
