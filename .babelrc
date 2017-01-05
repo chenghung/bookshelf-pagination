@@ -1,9 +1,8 @@
 {
-  "env": {
-    "test": {
-      "plugins": ["istanbul"]
-    }
-  },
-  "plugins": ["add-module-exports"],
-  "presets": ["es2015-node", "stage-3"]
+  "presets": ["es2015"],
+  "plugins": [
+    "syntax-object-rest-spread",
+    "transform-object-rest-spread",
+    ["transform-runtime", {"polyfill": false}]
+  ]
 }
