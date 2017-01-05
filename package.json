@@ -4,7 +4,7 @@
   "description": "Mask Bookshelf collection paginatable",
   "license": "MIT",
   "author": {
-    "name": "Eddie Chen",
+    "name": "Eddie Chen"
   },
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
   "keywords": [
     "bookshelf",
     "collection",
-    "pagination",
+    "pagination"
   ],
   "options": {
     "mocha": "--compilers js:babel-register --bail --require should test"
