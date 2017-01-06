@@ -175,25 +175,34 @@ module.exports = function paginationPlugin(bookshelf) {
       var notNeededQueries = ['orderByBasic', 'orderByRaw'];
       var groupQueries = ['groupByBasic', 'groupByRaw'];
       var counter = _this.constructor.forge();
+      var statementTypes = (0, _lodash.map)(_this.query()._statements, function (statement) {
+        return statement.type;
+      });
+      var containGroupBy = (0, _lodash.intersection)(statementTypes, groupQueries).length > 0;
 
       return counter.query(function (qb) {
+        var newQuery = qb.clone();
         (0, _lodash.assign)(qb, _this.query().clone());
 
-        var statementTypes = (0, _lodash.map)(qb._statements, function (statement) {
-          return statement.type;
-        });
-        var containGroupBy = (0, _lodash.intersection)(statementTypes, groupQueries).length > 0;
-        if (containGroupBy) {
-          console.log('count group by SQL', qb.toSQL());
-        }
-
-        // Remove grouping and ordering. Ordering is unnecessary
-        // for a count, and grouping returns the entire result set
-        // What we want instead is to use `DISTINCT`
+        // Remove ordering. Ordering is unnecessary
         (0, _lodash.remove)(qb._statements, function (statement) {
-          return notNeededQueries.indexOf(statement.type) > -1 || statement.grouping === 'columns';
+          return notNeededQueries.indexOf(statement.type) > -1 || !containGroupBy && statement.grouping === 'columns';
         });
-        qb.countDistinct.apply(qb, [tableName + '.' + idAttribute]);
+
+        if (containGroupBy) {
+          // generate count(*) on original query if query contains 'group by'
+          // e.g. select count(*) from (`original query`) as temp_counting_table
+          newQuery.select(bookshelf.knex.raw('count(*)'));
+
+          // newQuery.from(bookshelf.knex.raw('(' + qb.toSQL().sql + ') as temp_counting_table'));
+          newQuery.from(function () {
+            (0, _lodash.assign)(this, qb).as('temp_counting_table');
+          });
+
+          (0, _lodash.assign)(qb, newQuery);
+        } else {
+          qb.countDistinct.apply(qb, [tableName + '.' + idAttribute]);
+        }
       }).fetchAll().then(function (result) {
 
         var metadata = usingPageSize ? { page: _page, pageSize: _limit } : { offset: _offset, limit: _limit };

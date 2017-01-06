@@ -30,7 +30,7 @@ const DEFAULT_PAGE = 1;
  *
  * See methods below for details.
  */
-module.exports = function paginationPlugin (bookshelf) {
+module.exports = function paginationPlugin(bookshelf) {
 
   /**
    * @method Model#fetchPage
@@ -98,8 +98,8 @@ module.exports = function paginationPlugin (bookshelf) {
    *    {@link Model#fetchAll}
    * @returns {Promise<Model|null>}
    */
-  function fetchPage (options = {}) {
-    const {page, pageSize, limit, offset, ...fetchOptions} = options;
+  function fetchPage(options = {}) {
+    const { page, pageSize, limit, offset, ...fetchOptions } = options;
 
     let usingPageSize = false; // usingPageSize = false means offset/limit, true means page/pageSize
     let _page;
@@ -107,7 +107,7 @@ module.exports = function paginationPlugin (bookshelf) {
     let _limit;
     let _offset;
 
-    function ensureIntWithDefault (val, def) {
+    function ensureIntWithDefault(val, def) {
       if (!val) {
         return def;
       }
@@ -157,31 +157,40 @@ module.exports = function paginationPlugin (bookshelf) {
     const count = () => {
       const notNeededQueries = [
         'orderByBasic',
-        'orderByRaw'
+        'orderByRaw',
       ];
       const groupQueries = [
         'groupByBasic',
-        'groupByRaw'
+        'groupByRaw',
       ];
       const counter = this.constructor.forge();
+      const statementTypes = map(this.query()._statements, (statement) => statement.type);
+      const containGroupBy = intersection(statementTypes, groupQueries).length > 0;
 
       return counter.query(qb => {
+        let newQuery = qb.clone();
         assign(qb, this.query().clone());
 
-        const statementTypes = map(qb._statements, (statement) => statement.type);
-        const containGroupBy = intersection(statementTypes, groupQueries).length > 0;
-        if (containGroupBy) {
-          console.log('count group by SQL', qb.toSQL());
-        }
-
-        // Remove grouping and ordering. Ordering is unnecessary
-        // for a count, and grouping returns the entire result set
-        // What we want instead is to use `DISTINCT`
+        // Remove ordering. Ordering is unnecessary
         remove(qb._statements, statement => {
           return (notNeededQueries.indexOf(statement.type) > -1) ||
-            statement.grouping === 'columns';
+            (!containGroupBy && statement.grouping === 'columns');
         });
-        qb.countDistinct.apply(qb, [`${tableName}.${idAttribute}`]);
+
+        if (containGroupBy) {
+          // generate count(*) on original query if query contains 'group by'
+          // e.g. select count(*) from (`original query`) as temp_counting_table
+          newQuery.select(bookshelf.knex.raw('count(*)'));
+
+          // newQuery.from(bookshelf.knex.raw('(' + qb.toSQL().sql + ') as temp_counting_table'));
+          newQuery.from(function () {
+            assign(this, qb).as('temp_counting_table');
+          });
+
+          assign(qb, newQuery);
+        } else {
+          qb.countDistinct.apply(qb, [`${tableName}.${idAttribute}`]);
+        }
 
       }).fetchAll().then(result => {
 
