@@ -190,15 +190,12 @@ module.exports = function paginationPlugin(bookshelf) {
         });
 
         if (containGroupBy) {
-          // generate count(*) on original query if query contains 'group by'
+          // counting rows on original query if query contains 'group by'
           // e.g. select count(*) from (`original query`) as temp_counting_table
           newQuery.select(bookshelf.knex.raw('count(*)'));
+          newQuery.from(bookshelf.knex.raw('(' + qb.toString().replace(/"/g, '`') + ') as temp_counting_table'));
 
-          // newQuery.from(bookshelf.knex.raw('(' + qb.toSQL().sql + ') as temp_counting_table'));
-          newQuery.from(function () {
-            (0, _lodash.assign)(this, qb).as('temp_counting_table');
-          });
-
+          // replace original query
           (0, _lodash.assign)(qb, newQuery);
         } else {
           qb.countDistinct.apply(qb, [tableName + '.' + idAttribute]);
